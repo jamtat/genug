@@ -102,4 +102,5 @@ const Filters = {
 
 module.exports = PixelTransform
 
+
 PixelTransform.transform( 'olivia.jpg', [ Filters.lumaMap, Filters.invertAlpha, Filters.fill( 0, 0, 255 ) ] )
