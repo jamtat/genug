@@ -1,6 +1,7 @@
 import os
 import sys
 import multiprocessing
+import time
 from PIL import Image
 
 im = Image.open('olivia.jpg')
@@ -14,16 +15,15 @@ def pixelTransform(image, *transforms):
 	(w, h) = image.size
 	outImg = Image.new('RGBA', image.size)
 	outPixels = list(image.getdata())
-	# Transforms
+
+	p = multiprocessing.Pool()
+
 	for transform in transforms:
-		for x in range(w):
-			for y in range(h):
-				outPixels[y * w + x] = tuple(transform(outPixels[y * w + x]))
+		outPixels = p.map( lambda pixel: transform(pixel), outPixels )
 
 	outImg.putdata( outPixels )
 
 	return outImg
-
 
 # Invert an image but preserve alpha
 def invert(pixel):
@@ -55,5 +55,6 @@ def fill(r=255, g=255, b=255):
 
 	return do_fill
 
+# print(multiprocessing.cpu_count())
 
-pixelTransform( im, luma_map, invert_alpha, fill(0, 0, 255) ).save('out.png', 'PNG')
+pixelTransform( im, luma_map, invert_alpha, fill(0, 255, 255) ).save('out.png', 'PNG')

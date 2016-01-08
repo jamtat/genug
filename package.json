@@ -1,0 +1,27 @@
+{
+  "name": "distproc",
+  "version": "1.0.0",
+  "description": "see README.md",
+  "main": "encode.js",
+  "dependencies": {
+    "get-pixels": "^3.2.3",
+    "lodash": "^3.10.1",
+    "ndarray": "^1.0.18",
+    "paralleljs": "^0.2.1",
+    "save-pixels": "^2.3.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jamtat/distproc.git"
+  },
+  "author": "Ben Tattersley",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jamtat/distproc/issues"
+  },
+  "homepage": "https://github.com/jamtat/distproc#readme"
+}
