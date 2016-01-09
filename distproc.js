@@ -41,11 +41,11 @@ let ApplyProcessLocalSerial = ( filename, process ) => {
 	} )
 }
 
-let ApplyProcessLocalParallel = ( filename, process ) => {
+let ApplyProcessLocalParallel = ( filename, desiredProcess ) => {
 
-	let shuffler = process.shuffler
-	let mapper = process.mapper
-	let reducer = process.reducer
+	let shuffler = desiredProcess.shuffler
+	let mapper = desiredProcess.mapper
+	let reducer = desiredProcess.reducer
 
 	PixelUtils.getPixels( filename, ( err, pixels ) => {
 
