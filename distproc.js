@@ -34,9 +34,9 @@ let ApplyProcessLocalSerial = ( filename, process ) => {
 
 		let mapped = chunked.map( mapper )
 
-		let reduced = reducer( mapped )
+		// let reduced = reducer( mapped )
 
-		PixelUtils.savePixels( argv.out, reduced )
+		PixelUtils.savePixels( argv.out, pixels )
 
 	} )
 }
@@ -56,11 +56,13 @@ let ApplyProcessLocalParallel = ( filename, desiredProcess ) => {
 
 		for ( let i = 0; i < chunked.length; i++ ) {
 			let child = childProcess.fork( './lib/worker.js' )
+
 			child.send( {
 				chunkId: i,
 				argv: argv,
 				data: chunked[ i ]
 			} )
+
 			child.on( 'message', function( message ) {
 				console.log( '[parent] received message from child:', message.chunkId );
 				done++;
