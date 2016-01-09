@@ -1,106 +1,85 @@
 'use strict';
 
-const getPixels = require( 'get-pixels' )
-const savePixels = require( 'save-pixels' )
-const Parallel = require( 'paralleljs' )
-const ndarray = require( 'ndarray' )
-const _ = require( 'lodash' )
-const fs = require( 'fs' )
+const childProcess = require( 'child_process' )
+const PixelUtils = require( './lib/pixelutils' )
+const Processes = require( './lib/processes' )
+const Filters = require( './lib/filters' )
 
-const R = 0,
-	G = 1,
-	B = 2,
-	A = 3
 
-const PixelTransform = {
-	transform: function( imageName, filters ) {
+//Configure arguments
+let argv = require( 'yargs' )
+	.demand( 1 )
+	.alias( 'o', 'out' )
+	.alias( 'p', 'process' )
+	.alias( 'm', 'multicore' )
+	.boolean( 'multicore' )
+	.array( 'args' )
+	.alias( 'a', 'args' )
+	.default( 'args', [] )
+	.default( 'out', 'out.png' )
+	.default( 'process', 'pixelFilter' )
+	.default( 'multicore', false )
+	.argv
 
-		PixelTransform.getPixels( imageName, ( err, pixels ) => {
+let ApplyProcessLocalSerial = ( filename, process ) => {
 
-			let w = pixels[ 0 ].length
-			let h = pixels.length
+	let shuffler = process.shuffler
+	let mapper = process.mapper
+	let reducer = process.reducer
 
-			for ( let filter of filters ) {
-				for ( let y = 0; y < h; y++ ) {
-					for ( let x = 0; x < w; x++ ) {
-						pixels[ x ][ y ] = filter( pixels[ x ][ y ] )
-					}
-				}
-			}
 
-			let ndOut = ndarray( _.flattenDeep( pixels ), [ w, h, 4 ] )
-			let outStream = fs.createWriteStream( 'out.png' )
+	PixelUtils.getPixels( filename, ( err, pixels ) => {
 
-			savePixels( ndOut, 'png' ).pipe( outStream )
-		} )
-	},
+		let chunked = [ ...shuffler( pixels ) ]
 
-	getPixels: function( imageName, callback ) {
+		let mapped = chunked.map( mapper )
 
-		getPixels( imageName, ( err, ndPixels ) => {
-			if ( err ) callback( err, null );
+		let reduced = reducer( mapped )
 
-			let shape = ndPixels.shape
+		PixelUtils.savePixels( argv.out, reduced )
 
-			let w = shape[ 0 ]
-			let h = shape[ 1 ]
-			let channels = shape[ 2 ]
-
-			let pixels = []
-
-			for ( let x = 0; x < w; x++ ) {
-				pixels[ x ] = []
-				for ( let y = 0; y < h; y++ ) {
-					pixels[ x ][ y ] = [
-						ndPixels.get( x, y, R ),
-						ndPixels.get( x, y, G ),
-						ndPixels.get( x, y, B ),
-						channels === 4 ? ndPixels.get( x, y, A ) : 255
-					]
-				}
-			}
-
-			callback( err, pixels )
-		} )
-	}
+	} )
 }
 
-const Filters = {
-	invert: ( pixel ) => [
-		255 - pixel[ R ],
-		255 - pixel[ G ],
-		255 - pixel[ B ],
-		pixel[ A ]
-	],
+let ApplyProcessLocalParallel = ( filename, process ) => {
 
-	invertAlpha: ( pixel ) => [
-		pixel[ R ],
-		pixel[ G ],
-		pixel[ B ],
-		255 - pixel[ A ]
-	],
+	let shuffler = process.shuffler
+	let mapper = process.mapper
+	let reducer = process.reducer
 
-	greyscale: ( pixel ) => {
-		let intensity = ( pixel[ R ] + pixel[ G ] + pixel[ B ] ) / 3
-		return [ intensity, intensity, intensity, pixel[ A ] ]
-	},
+	PixelUtils.getPixels( filename, ( err, pixels ) => {
 
-	lumaMap: ( pixel ) => [
-		0,
-		0,
-		0, ( pixel[ R ] + pixel[ G ] + pixel[ B ] ) / 3
-	],
+		let done = 0;
 
-	fill: ( r, g, b ) => ( pixel ) => [
-		r,
-		g,
-		b,
-		pixel[ A ]
-	]
+		let chunked = [ ...shuffler( pixels ) ]
+		let mapped = []
+
+		for ( let i = 0; i < chunked.length; i++ ) {
+			let child = childProcess.fork( './lib/worker.js' )
+			child.send( {
+				chunkId: i,
+				argv: argv,
+				data: chunked[ i ]
+			} )
+			child.on( 'message', function( message ) {
+				console.log( '[parent] received message from child:', message.chunkId );
+				done++;
+				mapped[ message.chunkId ] = message.result
+				this.kill()
+				if ( done === chunked.length ) {
+					console.log( '[parent] received all results' );
+					let reduced = reducer( mapped )
+
+					PixelUtils.savePixels( argv.out, reduced )
+				}
+			} );
+		}
+
+	} )
 }
 
+let desiredProcess = Processes[ argv.process ]( argv.args )
 
-module.exports = PixelTransform
+let processApplicator = argv.multicore ? ApplyProcessLocalParallel : ApplyProcessLocalSerial
 
-
-PixelTransform.transform( 'olivia.jpg', [ Filters.lumaMap, Filters.invertAlpha, Filters.fill( 0, 0, 255 ) ] )
+processApplicator( argv._[ 0 ], desiredProcess )

@@ -9,7 +9,8 @@
     "lodash": "^3.10.1",
     "ndarray": "^1.0.18",
     "paralleljs": "^0.2.1",
-    "save-pixels": "^2.3.0"
+    "save-pixels": "^2.3.0",
+    "yargs": "^3.31.0"
   },
   "devDependencies": {},
   "scripts": {
