@@ -4,6 +4,7 @@ const childProcess = require( 'child_process' )
 const PixelUtils = require( './lib/pixelutils' )
 const Processes = require( './lib/processes' )
 const Filters = require( './lib/filters' )
+const fs = require( 'fs' )
 
 
 //Configure arguments
@@ -47,36 +48,74 @@ let ApplyProcessLocalParallel = ( filename, desiredProcess ) => {
 	let mapper = desiredProcess.mapper
 	let reducer = desiredProcess.reducer
 
+	let encode = desiredProcess.encode
+	let decode = desiredProcess.decode
+
 	PixelUtils.getPixels( filename, ( err, pixels ) => {
 
-		let done = 0;
-
-		let chunked = [ ...shuffler( pixels ) ]
+		let chunked = [ ...shuffler( pixels ) ].map( encode )
 		let mapped = []
 
-		for ( let i = 0; i < chunked.length; i++ ) {
-			let child = childProcess.fork( './lib/worker.js' )
+		let done = 0
 
-			child.send( {
-				chunkId: i,
-				argv: argv,
-				data: chunked[ i ]
+		chunked.map( ( chunk, i ) => {
+
+			let child = childProcess.spawn( 'node', [ './lib/worker.js' ], {
+				stdio: [ 'pipe', 'pipe', 'inherit' ]
 			} )
 
-			child.on( 'message', function( message ) {
-				console.log( '[parent] received message from child:', message.chunkId );
-				done++;
-				mapped[ message.chunkId ] = message.result
-				this.kill()
+			let metadata = JSON.stringify( {
+				chunkId: i,
+				argv: argv
+			} )
+
+			let resultBuffers = []
+			let resultLen = 0
+			let resultGot = 0
+
+			let len = metadata.length
+			let metadataBuffer = new Buffer( 2 + len )
+			metadataBuffer.writeUInt16BE( len, 0 )
+			metadataBuffer.write( metadata, 2 )
+
+			child.stdin.write( metadataBuffer )
+			child.stdin.write( chunk )
+			child.stdin.end()
+
+			let gotResult = () => {
+				mapped[ i ] = decode( Buffer.concat( resultBuffers ) )
+				done++
+				child.kill()
+
 				if ( done === chunked.length ) {
-					console.log( '[parent] received all results' );
+
 					let reduced = reducer( mapped )
 
 					PixelUtils.savePixels( argv.out, reduced )
 				}
-			} );
-		}
+			}
 
+			child.stdout.on( 'data', ( chunk ) => {
+				if ( resultLen === 0 ) {
+					resultLen = chunk.readUInt32BE( 0 )
+					resultBuffers.push( chunk.slice( 4 ) )
+					resultGot += ( chunk.length - 4 )
+
+					if ( resultGot === resultLen ) {
+						gotResult()
+					}
+				} else {
+
+					resultBuffers.push( chunk )
+					resultGot += chunk.length
+
+					if ( resultGot === resultLen ) {
+						gotResult()
+					}
+				}
+			} )
+
+		} )
 	} )
 }
 
