@@ -4,11 +4,9 @@
   "description": "see README.md",
   "main": "distproc.js",
   "dependencies": {
-    "command-line-args": "^2.1.4",
     "get-pixels": "^3.2.3",
     "lodash": "^3.10.1",
     "ndarray": "^1.0.18",
-    "paralleljs": "^0.2.1",
     "save-pixels": "^2.3.0",
     "yargs": "^3.31.0"
   },
