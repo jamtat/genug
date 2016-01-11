@@ -35,9 +35,9 @@ let ApplyProcessLocalSerial = ( filename, process ) => {
 
 		let mapped = chunked.map( mapper )
 
-		// let reduced = reducer( mapped )
+		let reduced = reducer( mapped )
 
-		PixelUtils.savePixels( argv.out, pixels )
+		PixelUtils.savePixels( argv.out, reduced )
 
 	} )
 }
