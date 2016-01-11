@@ -5,6 +5,7 @@ const PixelUtils = require( './lib/pixelutils' )
 const Processes = require( './lib/processes' )
 const Filters = require( './lib/filters' )
 const fs = require( 'fs' )
+const noop = ( x ) => x
 
 
 //Configure arguments
@@ -22,16 +23,17 @@ let argv = require( 'yargs' )
 	.default( 'multicore', false )
 	.argv
 
-let ApplyProcessLocalSerial = ( filename, process ) => {
+let ApplyProcessLocalSerial = ( filename, desiredProcess ) => {
 
-	let shuffler = process.shuffler
-	let mapper = process.mapper
-	let reducer = process.reducer
+	let shuffler = desiredProcess.shuffler
+	let mapper = desiredProcess.mapper
+	let reducer = desiredProcess.reducer
+	let preProcessor = desiredProcess.preProcessor ? desiredProcess.preProcessor : noop
 
 
 	PixelUtils.getPixels( filename, ( err, pixels ) => {
 
-		let chunked = [ ...shuffler( pixels ) ]
+		let chunked = [ ...shuffler( preProcessor( pixels ) ) ]
 
 		let mapped = chunked.map( mapper )
 
@@ -47,13 +49,14 @@ let ApplyProcessLocalParallel = ( filename, desiredProcess ) => {
 	let shuffler = desiredProcess.shuffler
 	let mapper = desiredProcess.mapper
 	let reducer = desiredProcess.reducer
+	let preProcessor = desiredProcess.preProcessor ? desiredProcess.preProcessor : noop
 
 	let encode = desiredProcess.encode
 	let decode = desiredProcess.decode
 
 	PixelUtils.getPixels( filename, ( err, pixels ) => {
 
-		let chunked = [ ...shuffler( pixels ) ].map( encode )
+		let chunked = [ ...shuffler( preProcessor( pixels ) ) ].map( encode )
 		let mapped = []
 
 		let done = 0
