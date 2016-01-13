@@ -1,10 +1,9 @@
 'use strict';
 
 const childProcess = require( 'child_process' )
+const MessageUtils = require( './lib/messageutils' )
 const PixelUtils = require( './lib/pixelutils' )
 const Processes = require( './lib/processes' )
-const Filters = require( './lib/filters' )
-const fs = require( 'fs' )
 const noop = ( x ) => x
 
 
@@ -76,10 +75,14 @@ let ApplyProcessLocalParallel = ( filename, desiredProcess ) => {
 			let resultLen = 0
 			let resultGot = 0
 
-			let len = metadata.length
-			let metadataBuffer = new Buffer( 2 + len )
-			metadataBuffer.writeUInt16BE( len, 0 )
-			metadataBuffer.write( metadata, 2 )
+			let metadataLength = metadata.length
+			let metadataBuffer = new Buffer( 4 + metadataLength )
+
+			metadataBuffer.writeUInt32BE( metadataLength, 0 )
+			metadataBuffer.write( metadata, 4 )
+
+			let chunkLength = chunk.length
+			let chunkLengthBuffer = new Buffer( 4 )
 
 			child.stdin.write( metadataBuffer )
 			child.stdin.write( chunk )
