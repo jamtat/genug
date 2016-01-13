@@ -14,12 +14,14 @@ let argv = require( 'yargs' )
 	.alias( 'p', 'process' )
 	.alias( 'm', 'multicore' )
 	.boolean( 'multicore' )
+	.boolean( 'worker' )
 	.array( 'args' )
 	.alias( 'a', 'args' )
 	.default( 'args', [] )
 	.default( 'out', 'out.png' )
 	.default( 'process', 'pixelFilter' )
 	.default( 'multicore', false )
+	.default( 'worker', false )
 	.argv
 
 let ApplyProcessLocalSerial = ( filename, desiredProcess ) => {
@@ -66,30 +68,18 @@ let ApplyProcessLocalParallel = ( filename, desiredProcess ) => {
 				stdio: [ 'pipe', 'pipe', 'inherit' ]
 			} )
 
-			let metadata = JSON.stringify( {
+			let metadata = {
 				chunkId: i,
 				argv: argv
-			} )
+			}
 
-			let resultBuffers = []
-			let resultLen = 0
-			let resultGot = 0
+			let result
 
-			let metadataLength = metadata.length
-			let metadataBuffer = new Buffer( 4 + metadataLength )
-
-			metadataBuffer.writeUInt32BE( metadataLength, 0 )
-			metadataBuffer.write( metadata, 4 )
-
-			let chunkLength = chunk.length
-			let chunkLengthBuffer = new Buffer( 4 )
-
-			child.stdin.write( metadataBuffer )
-			child.stdin.write( chunk )
-			child.stdin.end()
+			MessageUtils.writeData( metadata, child.stdin )
+			MessageUtils.writeData( chunk, child.stdin )
 
 			let gotResult = () => {
-				mapped[ i ] = decode( Buffer.concat( resultBuffers ) )
+				mapped[ i ] = decode( result )
 				done++
 				child.kill()
 
@@ -101,23 +91,10 @@ let ApplyProcessLocalParallel = ( filename, desiredProcess ) => {
 				}
 			}
 
-			child.stdout.on( 'data', ( chunk ) => {
-				if ( resultLen === 0 ) {
-					resultLen = chunk.readUInt32BE( 0 )
-					resultBuffers.push( chunk.slice( 4 ) )
-					resultGot += ( chunk.length - 4 )
-
-					if ( resultGot === resultLen ) {
-						gotResult()
-					}
-				} else {
-
-					resultBuffers.push( chunk )
-					resultGot += chunk.length
-
-					if ( resultGot === resultLen ) {
-						gotResult()
-					}
+			MessageUtils.handleIncomingMessages( child.stdout, ( message ) => {
+				if ( !result ) {
+					result = message
+					gotResult()
 				}
 			} )
 
@@ -125,8 +102,14 @@ let ApplyProcessLocalParallel = ( filename, desiredProcess ) => {
 	} )
 }
 
-let desiredProcess = Processes[ argv.process ]( argv.args )
+if ( argv.worker ) {
+	// This should be a worker process!
 
-let processApplicator = argv.multicore ? ApplyProcessLocalParallel : ApplyProcessLocalSerial
+} else {
+	// This is a normal process
+	let desiredProcess = Processes[ argv.process ]( argv.args )
 
-processApplicator( argv._[ 0 ], desiredProcess )
+	let processApplicator = argv.multicore ? ApplyProcessLocalParallel : ApplyProcessLocalSerial
+
+	processApplicator( argv._[ 0 ], desiredProcess )
+}
