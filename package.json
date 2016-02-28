@@ -4,6 +4,7 @@
   "description": "see README.md",
   "main": "distproc.js",
   "dependencies": {
+    "browserify": "^13.0.0",
     "get-pixels": "^3.2.3",
     "lodash": "^3.10.1",
     "ndarray": "^1.0.18",
