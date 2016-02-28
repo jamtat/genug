@@ -1,3 +1,5 @@
+#!/usr/local/bin/node
+
 'use strict';
 
 const childProcess = require( 'child_process' )
