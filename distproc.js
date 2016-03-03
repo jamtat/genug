@@ -1,4 +1,4 @@
-#!/usr/local/bin/node
+#!/usr/bin/env node
 
 'use strict';
 
@@ -21,6 +21,8 @@ let argv = require( 'yargs' )
 	.array( 'remotes' )
 	.boolean( 'multicore' )
 	.boolean( 'worker' )
+	.boolean( 'volunteer' )
+	.default( 'volunteer-port', 0 )
 	.array( 'args' )
 	.alias( 'a', 'args' )
 	.default( 'args', [] )
@@ -188,6 +190,9 @@ let ApplyProcessRemote = ( filename, desiredProcess ) => {
 	} )
 }
 
+
+let ApplyProcessVolunteer = require( './lib/applicators/volunteer.js' )
+
 if ( argv.worker ) {
 	// This should be a worker process!
 
@@ -227,6 +232,10 @@ if ( argv.worker ) {
 			processApplicator = ApplyProcessLocalParallel
 			break;
 
+		case argv.volunteer:
+			processApplicator = ApplyProcessVolunteer
+			break;
+
 		case argv.distributed:
 			processApplicator = ApplyProcessRemote
 
@@ -262,5 +271,5 @@ if ( argv.worker ) {
 
 	let inFile = argv.i ? argv.i : argv._[ 0 ]
 
-	processApplicator( inFile, desiredProcess )
+	processApplicator( inFile, desiredProcess, argv )
 }
