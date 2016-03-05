@@ -21,8 +21,8 @@ const UI = {
 	},
 
 	toggleWorking: () => {
-		UI.root.classList.toggle( 'wurking' )
 		UI.working = !UI.working
+		UI.root.className = UI.working ? 'wurking' : 'wurked'
 		UI.button.innerHTML = UI.working ? 'Working' : 'Get Work'
 	},
 
