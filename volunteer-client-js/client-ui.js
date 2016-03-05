@@ -14,8 +14,6 @@ const UI = {
 
 		window.addEventListener( 'resize', UI.onResize )
 		UI.onResize()
-
-		UI.button.addEventListener( 'click', UI.toggleWorking )
 	},
 
 	onResize: ( e ) => {
@@ -32,6 +30,11 @@ const UI = {
 		console.log( o )
 		UI.console.innerHTML += `<div>${_.isString( o ) ? o : JSON.stringify(o,null,'\t')}</div>\n`
 		UI.console.scrollTop = UI.console.scrollHeight - UI.console.offsetHeight
+	},
+
+	displayError: () => {
+		UI.root.classList.add( 'error' )
+		UI.button.innerHTML = 'UH OH'
 	},
 
 	onButtonClick: ( callback ) => UI.button.addEventListener( 'click', callback )

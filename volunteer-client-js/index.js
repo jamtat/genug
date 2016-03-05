@@ -20,14 +20,19 @@ let resetState = () => {
 }
 
 let requestWork = () => {
+	UI.toggleWorking()
 	socket = new WebSocket( `ws://${location.host}`, 'distproc' )
-	socket.binaryType = 'arraybuffer'
 
 	LOG( 'Requesting work' )
 
 	socket.onopen = ( e ) => MessageUtils.writeDataWebsocket( {
 		type: 'handshake'
 	}, socket )
+
+	socket.onerror = () => {
+		LOG( 'There was an error connecting to the server. Try refreshing or come back later!' )
+		UI.displayError()
+	}
 
 	MessageUtils.handleIncomingMessagesWebsocket( socket, ( message ) => {
 		if ( !metadata ) {
