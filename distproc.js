@@ -35,29 +35,24 @@ let argv = require( 'yargs' )
 	.argv
 
 
-let ApplyProcessLocalSerial = ( filename, desiredProcess ) => {
+let ApplyProcessLocalSerial = ( data, desiredProcess, argv ) => {
 
 	let shuffler = desiredProcess.shuffler
 	let mapper = desiredProcess.mapper
 	let reducer = desiredProcess.reducer
 	let preProcessor = desiredProcess.preProcessor ? desiredProcess.preProcessor : noop
 
+	let chunked = [ ...shuffler( preProcessor( data ) ) ]
 
-	IO.ImageIO.getPixels( filename, ( err, pixels ) => {
+	let mapped = chunked.map( mapper )
 
-		let chunked = [ ...shuffler( preProcessor( pixels ) ) ]
+	let reduced = reducer( mapped )
 
-		let mapped = chunked.map( mapper )
-
-		let reduced = reducer( mapped )
-
-		IO.ImageIO.savePixels( argv.out, reduced )
-
-	} )
+	IO.ImageIO.savePixels( argv.out, reduced )
 }
 
 
-let ApplyProcessLocalParallel = ( filename, desiredProcess ) => {
+let ApplyProcessLocalParallel = ( data, desiredProcess, argv ) => {
 
 	let shuffler = desiredProcess.shuffler
 	let mapper = desiredProcess.mapper
@@ -67,58 +62,55 @@ let ApplyProcessLocalParallel = ( filename, desiredProcess ) => {
 	let encode = desiredProcess.encode
 	let decode = desiredProcess.decode
 
-	IO.ImageIO.getPixels( filename, ( err, pixels ) => {
 
-		let chunked = [ ...shuffler( preProcessor( pixels ) ) ].map( encode )
-		let mapped = []
+	let chunked = [ ...shuffler( preProcessor( data ) ) ].map( encode )
+	let mapped = []
 
-		let done = 0
+	let done = 0
 
-		chunked.map( ( chunk, i ) => {
+	chunked.map( ( chunk, i ) => {
 
-			let child = childProcess.spawn( 'node', [ './lib/worker.js' ], {
-				stdio: [ 'pipe', 'pipe', 'inherit' ]
-			} )
+		let child = childProcess.spawn( 'node', [ './lib/worker.js' ], {
+			stdio: [ 'pipe', 'pipe', 'inherit' ]
+		} )
 
-			let metadata = {
-				chunkId: i,
-				argv: argv
+		let metadata = {
+			chunkId: i,
+			argv: argv
+		}
+
+		let resultMeta
+		let result
+
+		MessageUtils.writeData( metadata, child.stdin )
+		MessageUtils.writeData( chunk, child.stdin )
+
+		let gotResult = () => {
+			mapped[ i ] = decode( result )
+			done++
+			child.kill()
+
+			if ( done === chunked.length ) {
+
+				let reduced = reducer( mapped )
+
+				IO.ImageIO.savePixels( argv.out, reduced )
 			}
+		}
 
-			let resultMeta
-			let result
-
-			MessageUtils.writeData( metadata, child.stdin )
-			MessageUtils.writeData( chunk, child.stdin )
-
-			let gotResult = () => {
-				mapped[ i ] = decode( result )
-				done++
-				child.kill()
-
-				if ( done === chunked.length ) {
-
-					let reduced = reducer( mapped )
-
-					IO.ImageIO.savePixels( argv.out, reduced )
-				}
+		MessageUtils.handleIncomingMessages( child.stdout, ( message ) => {
+			if ( !resultMeta ) {
+				resultMeta = JSON.parse( message )
+			} else if ( !result ) {
+				result = message
+				gotResult()
 			}
-
-			MessageUtils.handleIncomingMessages( child.stdout, ( message ) => {
-				if ( !resultMeta ) {
-					resultMeta = JSON.parse( message )
-				} else if ( !result ) {
-					result = message
-					gotResult()
-				}
-			} )
-
 		} )
 	} )
 }
 
 
-let ApplyProcessRemote = ( filename, desiredProcess ) => {
+let ApplyProcessRemote = ( data, desiredProcess, argv ) => {
 
 	let shuffler = desiredProcess.shuffler
 	let mapper = desiredProcess.mapper
@@ -128,65 +120,61 @@ let ApplyProcessRemote = ( filename, desiredProcess ) => {
 	let encode = desiredProcess.encode
 	let decode = desiredProcess.decode
 
-	IO.ImageIO.getPixels( filename, ( err, pixels ) => {
 
-		let chunked = [ ...shuffler( preProcessor( pixels ) ) ].map( encode )
-		let mapped = []
+	let chunked = [ ...shuffler( preProcessor( data ) ) ].map( encode )
+	let mapped = []
 
-		let done = 0
+	let done = 0
 
-		let remotes = argv.remotes
-		let numRemotes = remotes.length
+	let remotes = argv.remotes
+	let numRemotes = remotes.length
 
-		chunked.map( ( chunk, i ) => {
+	chunked.map( ( chunk, i ) => {
 
-			let metadata = {
-				chunkId: i,
-				argv: argv
+		let metadata = {
+			chunkId: i,
+			argv: argv
+		}
+
+		let resultMeta
+		let result
+
+		let gotResult = () => {
+			mapped[ i ] = decode( result )
+			done++
+			remoteWorkerSocket.end()
+
+			if ( done === chunked.length ) {
+
+				let reduced = reducer( mapped )
+
+				IO.ImageIO.savePixels( argv.out, reduced )
 			}
+		}
 
-			let resultMeta
-			let result
+		let remoteAddress = remotes[ i % numRemotes ]
 
-			let gotResult = () => {
-				mapped[ i ] = decode( result )
-				done++
-				remoteWorkerSocket.end()
+		let remoteWorkerSocket = new net.Socket()
 
-				if ( done === chunked.length ) {
-
-					let reduced = reducer( mapped )
-
-					IO.ImageIO.savePixels( argv.out, reduced )
-				}
+		MessageUtils.handleIncomingMessages( remoteWorkerSocket, ( message ) => {
+			if ( !resultMeta ) {
+				resultMeta = JSON.parse( message )
+				console.log( `Remote chunk ${i} took ${resultMeta.time/1000}s (processing)` )
+			} else if ( !result ) {
+				result = message
+				gotResult()
 			}
-
-			let remoteAddress = remotes[ i % numRemotes ]
-
-			let remoteWorkerSocket = new net.Socket()
-
-			MessageUtils.handleIncomingMessages( remoteWorkerSocket, ( message ) => {
-				if ( !resultMeta ) {
-					resultMeta = JSON.parse( message )
-					console.log( `Remote chunk ${i} took ${resultMeta.time/1000}s (processing)` )
-				} else if ( !result ) {
-					result = message
-					gotResult()
-				}
-			} )
-
-			remoteWorkerSocket.connect( {
-				port: remoteAddress.port,
-				host: remoteAddress.host
-			}, () => {
-				console.log( `Sending chunk ${i} to ${remoteAddress.host}:${remoteAddress.port}` )
-
-				MessageUtils.writeData( metadata, remoteWorkerSocket )
-				MessageUtils.writeData( chunk, remoteWorkerSocket )
-			} )
-
 		} )
 
+		remoteWorkerSocket.connect( {
+			port: remoteAddress.port,
+			host: remoteAddress.host
+		}, () => {
+			console.log( `Sending chunk ${i} to ${remoteAddress.host}:${remoteAddress.port}` )
+
+			MessageUtils.writeData( metadata, remoteWorkerSocket )
+			MessageUtils.writeData( chunk, remoteWorkerSocket )
+		} )
 	} )
 }
 
@@ -271,5 +259,13 @@ if ( argv.worker ) {
 
 	let inFile = argv.i ? argv.i : argv._[ 0 ]
 
-	processApplicator( inFile, desiredProcess, argv )
+	IO.AutomaticIO.get( inFile, ( err, data ) => {
+		if ( err ) {
+			console.error( err )
+		} else {
+			processApplicator( data, desiredProcess, argv )
+		}
+	} )
+
+
 }
