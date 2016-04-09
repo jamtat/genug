@@ -4,7 +4,7 @@
 
 const childProcess = require( 'child_process' )
 const MessageUtils = require( './lib/messageutils' )
-const PixelUtils = require( './lib/pixelutils' )
+const IO = require( './lib/io' )
 const Processes = require( './lib/processes' )
 const noop = ( x ) => x
 const net = require( 'net' )
@@ -43,7 +43,7 @@ let ApplyProcessLocalSerial = ( filename, desiredProcess ) => {
 	let preProcessor = desiredProcess.preProcessor ? desiredProcess.preProcessor : noop
 
 
-	PixelUtils.getPixels( filename, ( err, pixels ) => {
+	IO.ImageIO.getPixels( filename, ( err, pixels ) => {
 
 		let chunked = [ ...shuffler( preProcessor( pixels ) ) ]
 
@@ -51,7 +51,7 @@ let ApplyProcessLocalSerial = ( filename, desiredProcess ) => {
 
 		let reduced = reducer( mapped )
 
-		PixelUtils.savePixels( argv.out, reduced )
+		IO.ImageIO.savePixels( argv.out, reduced )
 
 	} )
 }
@@ -67,7 +67,7 @@ let ApplyProcessLocalParallel = ( filename, desiredProcess ) => {
 	let encode = desiredProcess.encode
 	let decode = desiredProcess.decode
 
-	PixelUtils.getPixels( filename, ( err, pixels ) => {
+	IO.ImageIO.getPixels( filename, ( err, pixels ) => {
 
 		let chunked = [ ...shuffler( preProcessor( pixels ) ) ].map( encode )
 		let mapped = []
@@ -100,7 +100,7 @@ let ApplyProcessLocalParallel = ( filename, desiredProcess ) => {
 
 					let reduced = reducer( mapped )
 
-					PixelUtils.savePixels( argv.out, reduced )
+					IO.ImageIO.savePixels( argv.out, reduced )
 				}
 			}
 
@@ -128,7 +128,7 @@ let ApplyProcessRemote = ( filename, desiredProcess ) => {
 	let encode = desiredProcess.encode
 	let decode = desiredProcess.decode
 
-	PixelUtils.getPixels( filename, ( err, pixels ) => {
+	IO.ImageIO.getPixels( filename, ( err, pixels ) => {
 
 		let chunked = [ ...shuffler( preProcessor( pixels ) ) ].map( encode )
 		let mapped = []
@@ -157,7 +157,7 @@ let ApplyProcessRemote = ( filename, desiredProcess ) => {
 
 					let reduced = reducer( mapped )
 
-					PixelUtils.savePixels( argv.out, reduced )
+					IO.ImageIO.savePixels( argv.out, reduced )
 				}
 			}
 

@@ -1,6 +1,6 @@
 run:
-	time node distproc cat.jpg -p convolutionFilter -a boxBlur 5 -m
-	
+	time node distproc test_images/cat.jpg -p convolutionFilter -a boxBlur 5 -m
+
 copyimg:
 	rsync -r *.jpg *.png pi@JamPi.local:~/distproc
 
