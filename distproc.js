@@ -48,7 +48,7 @@ let ApplyProcessLocalSerial = ( data, desiredProcess, argv ) => {
 
 	let reduced = reducer( mapped )
 
-	IO.ImageIO.savePixels( argv.out, reduced )
+	IO.AutomaticIO.save( argv.out, reduced, () => {} )
 }
 
 
