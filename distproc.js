@@ -35,7 +35,7 @@ let argv = require( 'yargs' )
 	.argv
 
 
-let ApplyProcessLocalSerial = ( data, desiredProcess, argv ) => {
+let ApplyProcessLocalSerial = ( data, desiredProcess, argv, callback ) => {
 
 	let shuffler = desiredProcess.shuffler
 	let mapper = desiredProcess.mapper
@@ -48,11 +48,11 @@ let ApplyProcessLocalSerial = ( data, desiredProcess, argv ) => {
 
 	let reduced = reducer( mapped )
 
-	IO.AutomaticIO.save( argv.out, reduced, () => {} )
+	callback( null, reduced )
 }
 
 
-let ApplyProcessLocalParallel = ( data, desiredProcess, argv ) => {
+let ApplyProcessLocalParallel = ( data, desiredProcess, argv, callback ) => {
 
 	let shuffler = desiredProcess.shuffler
 	let mapper = desiredProcess.mapper
@@ -94,7 +94,7 @@ let ApplyProcessLocalParallel = ( data, desiredProcess, argv ) => {
 
 				let reduced = reducer( mapped )
 
-				IO.ImageIO.savePixels( argv.out, reduced )
+				callback( null, reduced )
 			}
 		}
 
@@ -110,7 +110,7 @@ let ApplyProcessLocalParallel = ( data, desiredProcess, argv ) => {
 }
 
 
-let ApplyProcessRemote = ( data, desiredProcess, argv ) => {
+let ApplyProcessRemote = ( data, desiredProcess, argv, callback ) => {
 
 	let shuffler = desiredProcess.shuffler
 	let mapper = desiredProcess.mapper
@@ -148,7 +148,7 @@ let ApplyProcessRemote = ( data, desiredProcess, argv ) => {
 
 				let reduced = reducer( mapped )
 
-				IO.ImageIO.savePixels( argv.out, reduced )
+				callback( null, reduced )
 			}
 		}
 
@@ -263,7 +263,9 @@ if ( argv.worker ) {
 		if ( err ) {
 			console.error( err )
 		} else {
-			processApplicator( data, desiredProcess, argv )
+			processApplicator( data, desiredProcess, argv, ( err, result ) => {
+				IO.AutomaticIO.save( argv.out, result, () => {} )
+			} )
 		}
 	} )
 
