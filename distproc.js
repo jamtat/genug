@@ -10,31 +10,6 @@ const noop = ( x ) => x
 const net = require( 'net' )
 
 
-//Configure arguments
-let argv = require( 'yargs' )
-	.alias( 'i', 'in' )
-	.alias( 'o', 'out' )
-	.alias( 'p', 'process' )
-	.alias( 'm', 'multicore' )
-	.alias( 'd', 'distributed' )
-	.alias( 'r', 'remotes' )
-	.array( 'remotes' )
-	.boolean( 'multicore' )
-	.boolean( 'worker' )
-	.boolean( 'volunteer' )
-	.default( 'volunteer-port', 0 )
-	.array( 'args' )
-	.alias( 'a', 'args' )
-	.default( 'args', [] )
-	.default( 'out', 'out.png' )
-	.default( 'process', 'pixelFilter' )
-	.default( 'multicore', false )
-	.default( 'worker', false )
-	.default( 'port', 0 )
-	.default( 'remotes', [] )
-	.argv
-
-
 let ApplyProcessLocalSerial = ( data, desiredProcess, argv, callback ) => {
 
 	let shuffler = desiredProcess.shuffler
@@ -181,93 +156,118 @@ let ApplyProcessRemote = ( data, desiredProcess, argv, callback ) => {
 
 let ApplyProcessVolunteer = require( './lib/applicators/volunteer.js' )
 
-if ( argv.worker ) {
-	// This should be a worker process!
+if ( require.main === module ) {
+	//Configure arguments
+	let argv = require( 'yargs' )
+		.alias( 'i', 'in' )
+		.alias( 'o', 'out' )
+		.alias( 'p', 'process' )
+		.alias( 'm', 'multicore' )
+		.alias( 'd', 'distributed' )
+		.alias( 'r', 'remotes' )
+		.array( 'remotes' )
+		.boolean( 'multicore' )
+		.boolean( 'worker' )
+		.boolean( 'volunteer' )
+		.default( 'volunteer-port', 0 )
+		.array( 'args' )
+		.alias( 'a', 'args' )
+		.default( 'args', [] )
+		.default( 'out', 'out.png' )
+		.default( 'process', 'pixelFilter' )
+		.default( 'multicore', false )
+		.default( 'worker', false )
+		.default( 'port', 0 )
+		.default( 'remotes', [] )
+		.argv
 
-	let server = net.createServer( ( socket ) => {
+	if ( argv.worker ) {
+		// This should be a worker process!
 
-		let remoteAddress = socket.address()
+		let server = net.createServer( ( socket ) => {
 
-		console.log( `Got connection from ${remoteAddress.address}:${remoteAddress.port}` )
+			let remoteAddress = socket.address()
 
-		let child = childProcess.spawn( 'node', [ './lib/worker.js' ], {
-			stdio: [ 'pipe', 'pipe', 'inherit' ]
-		} )
+			console.log( `Got connection from ${remoteAddress.address}:${remoteAddress.port}` )
 
-		socket.pipe( child.stdin )
-
-		child.stdout.pipe( socket )
-
-		socket.on( 'close', () => {
-			console.log( `Connection terminated to ${remoteAddress.address}:${remoteAddress.port}` )
-		} )
-	} )
-
-	server.listen( argv.port )
-
-	let serverPort = server.address().port
-
-	console.log( `Worker listening for jobs on port ${serverPort}` )
-
-} else {
-	// This is a normal process
-	let desiredProcess = Processes[ argv.process ]( argv.args )
-
-	let processApplicator
-
-	switch ( true ) {
-		case argv.multicore:
-			processApplicator = ApplyProcessLocalParallel
-			break;
-
-		case argv.volunteer:
-			processApplicator = ApplyProcessVolunteer
-			break;
-
-		case argv.distributed:
-			processApplicator = ApplyProcessRemote
-
-			if ( !argv.remotes.length ) {
-				throw 'Supply addresses to worker servers'
-			}
-
-			argv.remotes = argv.remotes.map( ( remoteString ) => {
-				let splitIndex = remoteString.lastIndexOf( ':' )
-
-				if ( splitIndex < 0 ) {
-					throw `Invalid hostname/port "${remoteString}"`
-				}
-
-				let host = remoteString.slice( 0, splitIndex )
-				let port = remoteString.slice( splitIndex + 1 )
-
-				if ( !host || !port ) {
-					throw `Invalid hostname/port "${remoteString}"`
-				}
-
-				return {
-					host, port
-				}
+			let child = childProcess.spawn( 'node', [ './lib/worker.js' ], {
+				stdio: [ 'pipe', 'pipe', 'inherit' ]
 			} )
 
-			break;
+			socket.pipe( child.stdin )
 
-		default:
-			processApplicator = ApplyProcessLocalSerial
-			break;
-	}
+			child.stdout.pipe( socket )
 
-	let inFile = argv.i ? argv.i : argv._[ 0 ]
-
-	IO.AutomaticIO.get( inFile, ( err, data ) => {
-		if ( err ) {
-			console.error( err )
-		} else {
-			processApplicator( data, desiredProcess, argv, ( err, result ) => {
-				IO.AutomaticIO.save( argv.out, result, () => {} )
+			socket.on( 'close', () => {
+				console.log( `Connection terminated to ${remoteAddress.address}:${remoteAddress.port}` )
 			} )
+		} )
+
+		server.listen( argv.port )
+
+		let serverPort = server.address().port
+
+		console.log( `Worker listening for jobs on port ${serverPort}` )
+
+	} else {
+		// This is a normal process
+
+		let desiredProcess = Processes[ argv.process ]( argv.args )
+
+		let processApplicator
+
+		switch ( true ) {
+			case argv.multicore:
+				processApplicator = ApplyProcessLocalParallel
+				break;
+
+			case argv.volunteer:
+				processApplicator = ApplyProcessVolunteer
+				break;
+
+			case argv.distributed:
+				processApplicator = ApplyProcessRemote
+
+				if ( !argv.remotes.length ) {
+					throw 'Supply addresses to worker servers'
+				}
+
+				argv.remotes = argv.remotes.map( ( remoteString ) => {
+					let splitIndex = remoteString.lastIndexOf( ':' )
+
+					if ( splitIndex < 0 ) {
+						throw `Invalid hostname/port "${remoteString}"`
+					}
+
+					let host = remoteString.slice( 0, splitIndex )
+					let port = remoteString.slice( splitIndex + 1 )
+
+					if ( !host || !port ) {
+						throw `Invalid hostname/port "${remoteString}"`
+					}
+
+					return {
+						host, port
+					}
+				} )
+
+				break;
+
+			default:
+				processApplicator = ApplyProcessLocalSerial
+				break;
 		}
-	} )
 
+		let inFile = argv.i ? argv.i : argv._[ 0 ]
 
+		IO.AutomaticIO.get( inFile, ( err, data ) => {
+			if ( err ) {
+				console.error( err )
+			} else {
+				processApplicator( data, desiredProcess, argv, ( err, result ) => {
+					IO.AutomaticIO.save( argv.out, result, () => {} )
+				} )
+			}
+		} )
+	}
 }
