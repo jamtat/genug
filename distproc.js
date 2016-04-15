@@ -2,7 +2,6 @@
 
 'use strict';
 
-const childProcess = require( 'child_process' )
 const MessageUtils = require( './lib/messageutils' )
 const IO = require( './lib/io' )
 const Processes = require( './lib/processes' )
@@ -10,65 +9,8 @@ const noop = ( x ) => x
 const net = require( 'net' )
 
 
-let ApplyProcessLocalSerial = require( './lib/applicators/serial' )
-
-
-let ApplyProcessLocalParallel = ( data, desiredProcess, argv, callback ) => {
-
-	let shuffler = desiredProcess.shuffler
-	let mapper = desiredProcess.mapper
-	let reducer = desiredProcess.reducer
-	let preProcessor = desiredProcess.preProcessor ? desiredProcess.preProcessor : noop
-
-	let encode = desiredProcess.encode
-	let decode = desiredProcess.decode
-
-
-	let chunked = [ ...shuffler( preProcessor( data ) ) ].map( encode )
-	let mapped = []
-
-	let done = 0
-
-	chunked.map( ( chunk, i ) => {
-
-		let child = childProcess.spawn( 'node', [ './lib/worker.js' ], {
-			stdio: [ 'pipe', 'pipe', 'inherit' ]
-		} )
-
-		let metadata = {
-			chunkId: i,
-			argv: argv
-		}
-
-		let resultMeta
-		let result
-
-		MessageUtils.writeData( metadata, child.stdin )
-		MessageUtils.writeData( chunk, child.stdin )
-
-		let gotResult = () => {
-			mapped[ i ] = decode( result )
-			done++
-			child.kill()
-
-			if ( done === chunked.length ) {
-
-				let reduced = reducer( mapped )
-
-				callback( null, reduced )
-			}
-		}
-
-		MessageUtils.handleIncomingMessages( child.stdout, ( message ) => {
-			if ( !resultMeta ) {
-				resultMeta = JSON.parse( message )
-			} else if ( !result ) {
-				result = message
-				gotResult()
-			}
-		} )
-	} )
-}
+const ApplyProcessLocalSerial = require( './lib/applicators/serial' )
+const ApplyProcessLocalParallel = require( './lib/applicators/parallel' )
 
 
 let ApplyProcessRemote = ( data, desiredProcess, argv, callback ) => {
