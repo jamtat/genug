@@ -4,3 +4,5 @@ out.png
 log.txt
 test_images/
 warAndPeace.txt
+tmp/
+count.json
