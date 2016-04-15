@@ -13,6 +13,12 @@ const ApplyProcessLocalParallel = require( './lib/applicators/parallel' )
 const ApplyProcessRemote = require( './lib/applicators/remote' )
 const ApplyProcessVolunteer = require( './lib/applicators/volunteer.js' )
 
+module.exports = {
+	IO,
+	Worker,
+	StreamWorker,
+	WorkerServer
+}
 
 if ( require.main === module ) {
 	//Configure arguments
@@ -107,8 +113,4 @@ if ( require.main === module ) {
 			}
 		} )
 	}
-}
-
-module.exports = {
-	IO
 }
