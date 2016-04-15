@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-'use strict';
+'use strict'
 
 const IO = require( './lib/io' )
 const Processes = require( './lib/processes' )
