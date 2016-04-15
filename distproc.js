@@ -3,13 +3,16 @@
 'use strict'
 
 const IO = require( './lib/io' )
+const Worker = require( './lib/worker/worker' )
+const StreamWorker = require( './lib/worker/streamworker' )
+const WorkerServer = require( './lib/worker/workerserver' )
 const Processes = require( './lib/processes' )
-
 
 const ApplyProcessLocalSerial = require( './lib/applicators/serial' )
 const ApplyProcessLocalParallel = require( './lib/applicators/parallel' )
 const ApplyProcessRemote = require( './lib/applicators/remote' )
 const ApplyProcessVolunteer = require( './lib/applicators/volunteer.js' )
+
 
 if ( require.main === module ) {
 	//Configure arguments
@@ -39,33 +42,9 @@ if ( require.main === module ) {
 	if ( argv.worker ) {
 		// This should be a worker process!
 
-		const net = require( 'net' )
-		const childProcess = require( 'child_process' )
-
-		let server = net.createServer( ( socket ) => {
-
-			let remoteAddress = socket.address()
-
-			console.log( `Got connection from ${remoteAddress.address}:${remoteAddress.port}` )
-
-			let child = childProcess.spawn( 'node', [ './lib/worker.js' ], {
-				stdio: [ 'pipe', 'pipe', 'inherit' ]
-			} )
-
-			socket.pipe( child.stdin )
-
-			child.stdout.pipe( socket )
-
-			socket.on( 'close', () => {
-				console.log( `Connection terminated to ${remoteAddress.address}:${remoteAddress.port}` )
-			} )
+		let workerServer = new WorkerServer( {
+			port: argv.port
 		} )
-
-		server.listen( argv.port )
-
-		let serverPort = server.address().port
-
-		console.log( `Worker listening for jobs on port ${serverPort}` )
 
 	} else {
 		// This is a normal process
