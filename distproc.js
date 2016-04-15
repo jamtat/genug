@@ -2,87 +2,14 @@
 
 'use strict';
 
-const MessageUtils = require( './lib/messageutils' )
 const IO = require( './lib/io' )
 const Processes = require( './lib/processes' )
-const noop = ( x ) => x
-const net = require( 'net' )
 
 
 const ApplyProcessLocalSerial = require( './lib/applicators/serial' )
 const ApplyProcessLocalParallel = require( './lib/applicators/parallel' )
-
-
-let ApplyProcessRemote = ( data, desiredProcess, argv, callback ) => {
-
-	let shuffler = desiredProcess.shuffler
-	let mapper = desiredProcess.mapper
-	let reducer = desiredProcess.reducer
-	let preProcessor = desiredProcess.preProcessor ? desiredProcess.preProcessor : noop
-
-	let encode = desiredProcess.encode
-	let decode = desiredProcess.decode
-
-
-	let chunked = [ ...shuffler( preProcessor( data ) ) ].map( encode )
-	let mapped = []
-
-	let done = 0
-
-	let remotes = argv.remotes
-	let numRemotes = remotes.length
-
-	chunked.map( ( chunk, i ) => {
-
-		let metadata = {
-			chunkId: i,
-			argv: argv
-		}
-
-		let resultMeta
-		let result
-
-		let gotResult = () => {
-			mapped[ i ] = decode( result )
-			done++
-			remoteWorkerSocket.end()
-
-			if ( done === chunked.length ) {
-
-				let reduced = reducer( mapped )
-
-				callback( null, reduced )
-			}
-		}
-
-		let remoteAddress = remotes[ i % numRemotes ]
-
-		let remoteWorkerSocket = new net.Socket()
-
-		MessageUtils.handleIncomingMessages( remoteWorkerSocket, ( message ) => {
-			if ( !resultMeta ) {
-				resultMeta = JSON.parse( message )
-				console.log( `Remote chunk ${i} took ${resultMeta.time/1000}s (processing)` )
-			} else if ( !result ) {
-				result = message
-				gotResult()
-			}
-		} )
-
-		remoteWorkerSocket.connect( {
-			port: remoteAddress.port,
-			host: remoteAddress.host
-		}, () => {
-			console.log( `Sending chunk ${i} to ${remoteAddress.host}:${remoteAddress.port}` )
-
-			MessageUtils.writeData( metadata, remoteWorkerSocket )
-			MessageUtils.writeData( chunk, remoteWorkerSocket )
-		} )
-	} )
-}
-
-
-let ApplyProcessVolunteer = require( './lib/applicators/volunteer.js' )
+const ApplyProcessRemote = require( './lib/applicators/remote' )
+const ApplyProcessVolunteer = require( './lib/applicators/volunteer.js' )
 
 if ( require.main === module ) {
 	//Configure arguments
@@ -111,6 +38,9 @@ if ( require.main === module ) {
 
 	if ( argv.worker ) {
 		// This should be a worker process!
+
+		const net = require( 'net' )
+		const childProcess = require( 'child_process' )
 
 		let server = net.createServer( ( socket ) => {
 
