@@ -10,21 +10,7 @@ const noop = ( x ) => x
 const net = require( 'net' )
 
 
-let ApplyProcessLocalSerial = ( data, desiredProcess, argv, callback ) => {
-
-	let shuffler = desiredProcess.shuffler
-	let mapper = desiredProcess.mapper
-	let reducer = desiredProcess.reducer
-	let preProcessor = desiredProcess.preProcessor ? desiredProcess.preProcessor : noop
-
-	let chunked = [ ...shuffler( preProcessor( data ) ) ]
-
-	let mapped = chunked.map( mapper )
-
-	let reduced = reducer( mapped )
-
-	callback( null, reduced )
-}
+let ApplyProcessLocalSerial = require( './lib/applicators/serial' )
 
 
 let ApplyProcessLocalParallel = ( data, desiredProcess, argv, callback ) => {
@@ -270,4 +256,8 @@ if ( require.main === module ) {
 			}
 		} )
 	}
+}
+
+module.exports = {
+	IO
 }
