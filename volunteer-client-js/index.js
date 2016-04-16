@@ -1,7 +1,6 @@
-console.log( `hello bacon` )
+'use strict'
 
-const _ = require( 'lodash' )
-const Processes = require( '../lib/processes' )
+const doWork = require( '../lib/worker/worker' ).doWork
 const MessageUtils = require( '../lib/messageutils' )
 const UI = require( './client-ui' )
 const LOG = UI.log
@@ -42,7 +41,7 @@ let requestWork = () => {
 		} else if ( !encodedBuffer ) {
 			encodedBuffer = message
 			LOG( `Got work buffer of size ${encodedBuffer.length/1e6}mb` )
-			_.defer( initiateWork )
+			setTimeout( initiateWork, 10 )
 		} else {
 			confirm = JSON.parse( message )
 			console.log( confirm )
@@ -56,31 +55,14 @@ let requestWork = () => {
 }
 
 let initiateWork = () => {
-	LOG( 'Loading process' )
-	let chunkId = metadata.chunkId
-	let desiredProcess = Processes[ metadata.argv.process ]( metadata.argv.args )
-
-	let mapper = desiredProcess.mapper
-
-	let encode = desiredProcess.encode
-	let decode = desiredProcess.decode
-
-	let data = decode( encodedBuffer )
-
 	LOG( 'Starting work' )
-	let startTime = Date.now()
-	let result = work( data, mapper )
-
-	metadata.time = Date.now() - startTime
+	let result = doWork( metadata, encodedBuffer )
 	LOG( `Completed in ${metadata.time/1000}s` )
-	LOG( 'Encoding result' )
-
-	let encodedResult = encode( result )
 	LOG( 'Sending encoded result' )
-	LOG( `Encoded size: ${encodedResult.length/1e6}mb` )
+	LOG( `Encoded size: ${result.encodedResult.length/1e6}mb` )
 
-	MessageUtils.writeDataWebsocket( metadata, socket )
-	MessageUtils.writeDataWebsocket( encodedResult, socket )
+	MessageUtils.writeDataWebsocket( result.metadata, socket )
+	MessageUtils.writeDataWebsocket( result.encodedResult, socket )
 }
 
 UI.onButtonClick( requestWork )
