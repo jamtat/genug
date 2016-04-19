@@ -1,8 +1,8 @@
 {
-  "name": "distproc",
+  "name": "genug",
   "version": "1.0.0",
   "description": "see README.md",
-  "main": "distproc.js",
+  "main": "genug.js",
   "dependencies": {
     "babel-core": "^6.7.6",
     "babel-polyfill": "^6.7.4",
@@ -25,12 +25,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jamtat/distproc.git"
+    "url": "git+https://github.com/jamtat/genug.git"
   },
   "author": "Ben Tattersley",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/jamtat/distproc/issues"
+    "url": "https://github.com/jamtat/genug/issues"
   },
-  "homepage": "https://github.com/jamtat/distproc#readme"
+  "homepage": "https://github.com/jamtat/genug#readme"
 }
