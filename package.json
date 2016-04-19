@@ -19,6 +19,7 @@
     "websocket": "^1.0.22",
     "yargs": "^4.6.0"
   },
+  "bin": "./genug.js",
   "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -27,10 +28,18 @@
     "type": "git",
     "url": "git+https://github.com/jamtat/genug.git"
   },
-  "author": "Ben Tattersley",
-  "license": "ISC",
+  "author": "Ben Tattersley <ben@ben.computer>",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/jamtat/genug/issues"
   },
-  "homepage": "https://github.com/jamtat/genug#readme"
+  "homepage": "https://github.com/jamtat/genug#readme",
+  "keywords": [
+    "genug",
+    "mapreduce",
+    "distributed",
+    "volunteer computing",
+    "parallel",
+    "multicore"
+  ]
 }
