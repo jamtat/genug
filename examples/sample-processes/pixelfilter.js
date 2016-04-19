@@ -2,8 +2,8 @@
 
 const _ = require( 'lodash' )
 const Filters = require( './misc/filters' )
-const Shufflers = require( '../shufflers' )
-const Reducers = require( '../reducers' )
+const Shufflers = require( '../../lib/shufflers' )
+const Reducers = require( '../../lib/reducers' )
 
 const parseFilters = ( filters ) => filters.map( ( filterName ) => {
 
@@ -63,5 +63,5 @@ module.exports = ( filters ) => ( {
 	mapper: PixelFilterMapper( parseFilters( filters ) ),
 	reducer: Reducers.imageChunks,
 	encode: ( chunk ) => chunk.toBuffer(),
-	decode: ( buffer ) => require( '../ImageBuffer' ).fromBuffer( buffer )
+	decode: ( buffer ) => require( '../../lib/ImageBuffer' ).fromBuffer( buffer )
 } )

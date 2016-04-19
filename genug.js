@@ -2,6 +2,9 @@
 
 'use strict'
 
+const path = require( 'path' )
+const fs = require( 'fs' )
+
 const IO = require( './lib/io' )
 const Worker = require( './lib/worker/worker' )
 const StreamWorker = require( './lib/worker/streamworker' )

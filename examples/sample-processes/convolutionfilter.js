@@ -1,9 +1,9 @@
 'use strict'
 
 const ConvolutionFilters = require( './misc/convolutionfilters' )
-const overlappingImageChunks = require( '../shufflers/overlappingimagechunks' )
-const Reducers = require( '../reducers' )
-const PixelUtils = require( '../utils/pixelutils' )
+const overlappingImageChunks = require( '../../lib/shufflers/overlappingimagechunks' )
+const Reducers = require( '../../lib/reducers' )
+const PixelUtils = require( '../../lib/utils/pixelutils' )
 
 const ConvolutionFilterMapper = ( kernel, preserveAlpha ) => ( pixels ) => {
 	return PixelUtils.convolution( pixels, kernel, preserveAlpha )
@@ -45,6 +45,6 @@ module.exports = ( args ) => {
 		mapper: ConvolutionFilterMapper( kernel, preserveAlpha ),
 		reducer: Reducers.imageChunks,
 		encode: ( chunk ) => chunk.toBuffer(),
-		decode: ( buffer ) => require( '../ImageBuffer' ).fromBuffer( buffer )
+		decode: ( buffer ) => require( '../../lib/ImageBuffer' ).fromBuffer( buffer )
 	}
 }

@@ -1,6 +1,6 @@
 'use strict'
 
-const simpleChunks = require( '../shufflers/simplechunks' )
+const simpleChunks = require( '../../lib/shufflers/simplechunks' )
 
 const linebreakRegex = /\r\n?|\n/g
 
@@ -14,7 +14,7 @@ const shuffler = ( numChunks ) => function*( str ) {
 
 const mapper = ( chunk ) => {
 	let words = chunk.toLowerCase()
-		.split( /[^\-\w&(\w.\w)+]/g )
+		.split( /[^\-\w&(\w.\w)+]/g ) // Split on non word like characters
 		.filter( ( s ) => !!s )
 
 	let count = words.reduce( ( acc, word ) => {

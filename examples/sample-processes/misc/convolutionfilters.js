@@ -1,6 +1,6 @@
 'use strict'
 
-const MatrixUtils = require( '../../utils/matrixutils' )
+const MatrixUtils = require( '../../../lib/utils/matrixutils' )
 
 const ConvolutionFilters = {
 	boxBlur: ( size ) => {
