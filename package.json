@@ -13,7 +13,6 @@
     "get-pixels": "^3.3.0",
     "less": "^2.6.1",
     "lodash": "^3.10.1",
-    "mkdirp": "^0.5.1",
     "ndarray": "^1.0.18",
     "save-pixels": "^2.3.0",
     "websocket": "^1.0.22",

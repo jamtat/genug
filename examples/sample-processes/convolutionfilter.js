@@ -40,7 +40,7 @@ module.exports = ( args ) => {
 	let preserveAlpha = resultingFilter.preserveAlpha
 
 	return {
-		preProcessor: ( pixels ) => require( '../utils/pixelutils' ).repeatEdges( pixels, filterSize ),
+		preProcessor: ( pixels ) => require( '../../lib/utils/pixelutils' ).repeatEdges( pixels, filterSize ),
 		shuffler: overlappingImageChunks( 4, filterSize ),
 		mapper: ConvolutionFilterMapper( kernel, preserveAlpha ),
 		reducer: Reducers.imageChunks,
