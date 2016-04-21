@@ -1,6 +1,6 @@
 {
   "name": "genug",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "A flexible framework for distributed data processing",
   "main": "genug.js",
   "dependencies": {
